@@ -71,9 +71,32 @@ void Board::showBoard(){
     }
         
 }
+bool Board::hasLegalMoves(){
+    PieceColor turnColor = (currentTurn == Turn::WHITE)? PieceColor::WHITE : PieceColor::BLACK;
+
+    for (int i = 0; i < 8; i ++){
+        for (int j = 0; j<8; j ++){
+            if (grid[i][j] != nullptr && grid[i][j]->getColor() == turnColor){
+                for (int k = 0; k < 8; k ++){
+                    for (int l = 0; l<8; l ++){
+                        if(!(k==i && l==j)){
+                            if (simulateMoveandCheck(j,i,l,k)) return true;
+                            
+                        }
+                    }
+                }
+            }
+
+        }
+    }
+    return false;
+}
+
 
 void Board::movePiece(int startX, int startY, int endX, int endY) {
     
+    if (currentStatus != GameStatus::ONGOING) return;
+
     if (grid[startX][startY] == nullptr) return; 
     
     PieceColor expectedColor = (currentTurn == Turn::WHITE) ? PieceColor::WHITE : PieceColor::BLACK;
@@ -98,10 +121,21 @@ void Board::movePiece(int startX, int startY, int endX, int endY) {
         }
     }
 
-    if(simulateMoveandCheck(startX,startY,endX,endY)) return;
+    if(!simulateMoveandCheck(startX,startY,endX,endY)) return;
 
     grid[endX][endY] = std::move(grid[startX][startY]);
     currentTurn = (currentTurn == Turn::WHITE) ? Turn::BLACK : Turn::WHITE;
+
+    if (!hasLegalMoves()) {
+    if (isCheck(currentTurn)) {
+        isGameOver = true;
+        currentStatus =  (currentTurn == Turn::WHITE) ? GameStatus::BLACK_WIN :GameStatus::WHITE_WIN;
+
+    } else {
+        isGameOver = true;
+        currentStatus = GameStatus::TIE;
+    }
+}
 }
 
 bool Board::isPathClear(int startX,int startY,int endX,int endY){
