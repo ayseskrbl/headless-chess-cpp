@@ -24,13 +24,15 @@ class Board{
         pair<int,int> kingPosition(Turn turn);
         bool isGameOver = false;
     public:
+        int enPassantX,enPassantY = -1;
+
         Turn currentTurn = Turn::WHITE;
         GameStatus currentStatus = GameStatus::ONGOING;
 
         void cleanBoard();
         void setBoard();
         void showBoard();
-        void movePiece(int startX, int startY, int endX, int endY);
+        void movePiece(int startX, int startY, int endX, int endY,char prom = 'Q');
         bool isPathClear(int startX, int startY, int endX, int endY);
         bool isCheck(Turn turn);
         bool simulateMoveandCheck(int startX, int startY, int endX, int endY);

@@ -63,5 +63,13 @@ bool Queen::isValidMove(int startX, int startY, int endX, int endY, Piece * targ
 
 
 bool King::isValidMove(int startX, int startY, int endX, int endY, Piece * targetPiece){
-    return (abs(endX - startX) <= 1 && abs(endY - startY) <= 1);
+    if (abs(endX - startX) <= 1 && abs(endY - startY) <= 1){
+        return true;
+    }
+
+    if (abs(endX - startX) == 2 && abs(endY - startY) == 0 && !pieceMoved()) {
+        return true;
+    }
+
+    return false;
 }

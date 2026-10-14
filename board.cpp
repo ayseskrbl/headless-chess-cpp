@@ -17,12 +17,12 @@ void Board:: cleanBoard(){
 bool Board::simulateMoveandCheck(int startX, int startY, int endX, int endY){
     bool isDanger;
 
-    unique_ptr<Piece> temp = move(grid[endX][endY]);
-    grid[endX][endY] = move(grid[startX][startY]);
+    unique_ptr<Piece> temp = std::move(grid[endX][endY]);
+    grid[endX][endY] = std::move(grid[startX][startY]);
 
     isDanger = isCheck(currentTurn);
-    grid[startX][startY] = move(grid[endX][endY]);
-    grid[endX][endY] = move(temp);
+    grid[startX][startY] = std::move(grid[endX][endY]);
+    grid[endX][endY] = std::move(temp);
 
     return isDanger;
 
@@ -93,7 +93,7 @@ bool Board::hasLegalMoves(){
 }
 
 
-void Board::movePiece(int startX, int startY, int endX, int endY) {
+void Board::movePiece(int startX, int startY, int endX, int endY, char prom) {
     
     if (currentStatus != GameStatus::ONGOING) return;
 
@@ -115,15 +115,70 @@ void Board::movePiece(int startX, int startY, int endX, int endY) {
     }
 
     char symbol = grid[startX][startY]->getSymbol();
+
     if (symbol != 'N' && symbol != 'n') {
         if (!isPathClear(startX, startY, endX, endY)) {
             return; 
         }
     }
 
-    if(!simulateMoveandCheck(startX,startY,endX,endY)) return;
+    if(simulateMoveandCheck(startX,startY,endX,endY)) return;
+
+    if (symbol == 'K' || symbol == 'k'){
+        if (abs(endY - startY) == 2) {
+        int rookStartY = (endY > startY) ? 7 : 0;
+        if (grid[startX][rookStartY] == nullptr || grid[startX][rookStartY]->pieceMoved()) return;
+        
+        int rookEndY = (endY > startY) ? endY - 1 : endY + 1;
+
+        grid[startX][rookEndY] = std::move(grid[startX][rookStartY]);
+        grid[startX][rookEndY]->setMove();
+}
+    }
+
+    
+    
+    if ((symbol == 'P' || symbol == 'p') && (startY != endY) && grid[endX][endY] == nullptr && endX == enPassantX && endY == enPassantY) {
+        grid[startX][endY] = nullptr;
+    }
 
     grid[endX][endY] = std::move(grid[startX][startY]);
+
+    enPassantX = -1;
+    enPassantY = -1;
+
+    if ((symbol == 'P' || symbol == 'p') && abs(endX - startX) == 2 && startY == endY) {
+        enPassantX = (startX + endX) / 2;
+        enPassantY = endY;
+    }
+
+    grid[endX][endY]->setMove();
+
+    unique_ptr<Piece> newPiece;
+
+    if (symbol == 'P' || symbol == 'p'){
+        if(endX == 0 || endX == 7){
+            switch(prom){
+                case 'N': case 'n': 
+                newPiece = make_unique<Knight>(grid[endX][endY]->getColor());
+                break;
+            case 'R': case 'r': 
+                newPiece = make_unique<Rook>(grid[endX][endY] -> getColor()); 
+                break;
+            case 'B': case 'b': 
+                newPiece = make_unique<Bishop>(grid[endX][endY] -> getColor()); 
+                break;
+            default:            
+                newPiece = make_unique<Queen>(grid[endX][endY] -> getColor()); 
+                break;
+        }
+            grid[endX][endY] = std::move(newPiece);
+            }
+        }
+    
+
+
+
     currentTurn = (currentTurn == Turn::WHITE) ? Turn::BLACK : Turn::WHITE;
 
     if (!hasLegalMoves()) {

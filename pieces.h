@@ -11,7 +11,8 @@ class Piece{
     protected:
         char pieceSymbol;
         PieceColor pieceColor;
-    
+        bool isMoved = false;
+
     public:
         Piece(char pieceSymbol, PieceColor pieceColor);
         
@@ -20,6 +21,12 @@ class Piece{
         }
         PieceColor getColor(){
             return pieceColor;
+        }
+        bool pieceMoved(){
+            return isMoved;
+        }
+        void setMove(){
+            isMoved = true;
         }
         
         virtual bool isValidMove(int startX, int startY, int endX, int endY,Piece * targetPiece) { return true; }
