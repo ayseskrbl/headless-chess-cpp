@@ -67,7 +67,7 @@ bool King::isValidMove(int startX, int startY, int endX, int endY, Piece * targe
         return true;
     }
 
-    if (abs(endX - startX) == 2 && abs(endY - startY) == 0 && !pieceMoved()) {
+    if (abs(endX - startX) == 0 && abs(endY - startY) == 2 && !pieceMoved()) {
         return true;
     }
 

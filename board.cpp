@@ -110,7 +110,10 @@ void Board::movePiece(int startX, int startY, int endX, int endY, char prom) {
         return; 
     }
 
-    if (!grid[startX][startY]->isValidMove(startX, startY, endX, endY, targetPiece)) {
+    char sym = grid[startX][startY]->getSymbol();
+    bool isEP = (sym == 'P' || sym == 'p') && abs(endY - startY) == 1 && endX == enPassantX && endY == enPassantY;
+
+    if (!isEP && !grid[startX][startY]->isValidMove(startX, startY, endX, endY, targetPiece)) {
         return; 
     }
 
@@ -145,7 +148,7 @@ void Board::movePiece(int startX, int startY, int endX, int endY, char prom) {
     grid[endX][endY] = std::move(grid[startX][startY]);
 
     enPassantX = -1;
-    enPassantY = -1;
+   enPassantY = -1;
 
     if ((symbol == 'P' || symbol == 'p') && abs(endX - startX) == 2 && startY == endY) {
         enPassantX = (startX + endX) / 2;
@@ -239,9 +242,182 @@ bool Board::isCheck(Turn turn){
     for(int y = 0; y < 8; y ++){
         for (int x = 0; x<8; x++){
             if (grid[x][y] != nullptr  && grid[x][y] -> getColor() == enemyColor){
-                if (grid[x][y] -> isValidMove(x,y,kingX,kingY,kingPiece)) return true;
+                if (grid[x][y] -> isValidMove(x,y,kingX,kingY,kingPiece)) {
+                    char symbol = grid[x][y]->getSymbol();
+                    if (symbol == 'N' || symbol == 'n' || isPathClear(x, y, kingX, kingY)) {
+                            return true;
+                        }
+                    } 
                 }
         }
     } 
     return false;
+}
+
+long long Board::perft(int depth) {
+    if (depth == 0) {
+        return 1;
+    }
+
+    long long nodes = 0;
+    PieceColor turnColor = (currentTurn == Turn::WHITE) ? PieceColor::WHITE : PieceColor::BLACK;
+
+    for (int startX = 0; startX < 8; startX++) {
+        for (int startY = 0; startY < 8; startY++) {
+            if (grid[startX][startY] != nullptr && grid[startX][startY]->getColor() == turnColor) {
+                for (int endX = 0; endX < 8; endX++) {
+                    for (int endY = 0; endY < 8; endY++) {
+                        if (startX == endX && startY == endY) continue;
+
+                        Piece* target = grid[endX][endY].get();
+                        if (target != nullptr && target->getColor() == turnColor) continue;
+
+                        char sym = grid[startX][startY]->getSymbol();
+                        
+                        // VIP Geçiş İzni: Eğer bu bir En Passant hamlesiyse normal kuralları esnet.
+                        bool isEP = (sym == 'P' || sym == 'p') && abs(endY - startY) == 1 && endX == enPassantX && endY == enPassantY;
+                        if (!isEP && !grid[startX][startY]->isValidMove(startX, startY, endX, endY, target)) continue;
+
+                        if (sym != 'N' && sym != 'n' && !isPathClear(startX, startY, endX, endY)) continue;
+                        if (simulateMoveandCheck(startX, startY, endX, endY)) continue;
+
+                        // --- YEDEKLE ---
+                        Turn oldTurn = currentTurn;
+                        int oldEpX = enPassantX;
+                        int oldEpY = enPassantY;
+                        GameStatus oldStatus = currentStatus;
+                        
+                        unique_ptr<Piece> capturedPiece = std::move(grid[endX][endY]);
+                        unique_ptr<Piece> epCapturedPiece = nullptr;
+                        int capturedEpVictimX = -1, capturedEpVictimY = -1;
+                        bool isEnPassantMove = (sym == 'P' || sym == 'p') && (startY != endY) && (capturedPiece == nullptr) && (endX == enPassantX && endY == enPassantY);
+                        
+                        if (isEnPassantMove) {
+                            capturedEpVictimX = startX;
+                            capturedEpVictimY = endY;
+                            epCapturedPiece = std::move(grid[capturedEpVictimX][capturedEpVictimY]);
+                        }
+
+                        // --- HAMLEYİ UYGULA ---
+                        grid[endX][endY] = std::move(grid[startX][startY]);
+                        
+                        // En Passant hafızasını güncelle (Depth 5'te buharlaşan o 258 hamlenin ilacı!)
+                        enPassantX = -1;
+                        enPassantY = -1;
+                        if ((sym == 'P' || sym == 'p') && abs(endX - startX) == 2 && startY == endY) {
+                            enPassantX = (startX + endX) / 2;
+                            enPassantY = endY;
+                        }
+
+                        currentTurn = (currentTurn == Turn::WHITE) ? Turn::BLACK : Turn::WHITE;
+
+                        // --- DÜĞÜMLERİ SAY ---
+                        nodes += perft(depth - 1);
+
+                        // --- GERİ AL ---
+                        grid[startX][startY] = std::move(grid[endX][endY]);
+                        grid[endX][endY] = std::move(capturedPiece);
+                        
+                        if (isEnPassantMove) {
+                            grid[capturedEpVictimX][capturedEpVictimY] = std::move(epCapturedPiece);
+                        }
+
+                        currentTurn = oldTurn;
+                        enPassantX = oldEpX;
+                        enPassantY = oldEpY;
+                        currentStatus = oldStatus;
+                    }
+                }
+            }
+        }
+    }
+    return nodes;
+}
+
+
+void Board::perftDivide(int depth) {
+    if (depth == 0) return;
+    
+    long long totalNodes = 0;
+    PieceColor turnColor = (currentTurn == Turn::WHITE) ? PieceColor::WHITE : PieceColor::BLACK;
+
+    for (int startX = 0; startX < 8; startX++) {
+        for (int startY = 0; startY < 8; startY++) {
+            if (grid[startX][startY] != nullptr && grid[startX][startY]->getColor() == turnColor) {
+                for (int endX = 0; endX < 8; endX++) {
+                    for (int endY = 0; endY < 8; endY++) {
+                        if (startX == endX && startY == endY) continue;
+
+                        Piece* target = grid[endX][endY].get();
+                        if (target != nullptr && target->getColor() == turnColor) continue;
+                        
+                        char sym = grid[startX][startY]->getSymbol();
+                        
+                        // VIP Geçiş İzni
+                        bool isEP = (sym == 'P' || sym == 'p') && abs(endY - startY) == 1 && endX == enPassantX && endY == enPassantY;
+                        if (!isEP && !grid[startX][startY]->isValidMove(startX, startY, endX, endY, target)) continue;
+
+                        if (sym != 'N' && sym != 'n' && !isPathClear(startX, startY, endX, endY)) continue;
+                        if (simulateMoveandCheck(startX, startY, endX, endY)) continue;
+
+                        // --- YEDEKLE ---
+                        Turn oldTurn = currentTurn;
+                        int oldEpX = enPassantX;
+                        int oldEpY = enPassantY;
+                        GameStatus oldStatus = currentStatus;
+                        
+                        unique_ptr<Piece> capturedPiece = std::move(grid[endX][endY]);
+                        unique_ptr<Piece> epCapturedPiece = nullptr;
+                        int capturedEpVictimX = -1, capturedEpVictimY = -1;
+                        bool isEnPassantMove = (sym == 'P' || sym == 'p') && (startY != endY) && (capturedPiece == nullptr) && (endX == enPassantX && endY == enPassantY);
+                        
+                        if (isEnPassantMove) {
+                            capturedEpVictimX = startX;
+                            capturedEpVictimY = endY;
+                            epCapturedPiece = std::move(grid[capturedEpVictimX][capturedEpVictimY]);
+                        }
+
+                        // --- HAMLEYİ UYGULA ---
+                        grid[endX][endY] = std::move(grid[startX][startY]);
+                        
+                        // En Passant hafızasını güncelle
+                        enPassantX = -1;
+                        enPassantY = -1;
+                        if ((sym == 'P' || sym == 'p') && abs(endX - startX) == 2 && startY == endY) {
+                            enPassantX = (startX + endX) / 2;
+                            enPassantY = endY;
+                        }
+
+                        currentTurn = (currentTurn == Turn::WHITE) ? Turn::BLACK : Turn::WHITE;
+
+                        // --- DÜĞÜMLERİ SAY ---
+                        long long nodes = perft(depth - 1);
+                        totalNodes += nodes;
+
+                        // KARELERİ SATRANÇ NOTASYONUNA ÇEVİR (Örn: e2e4)
+                        char startFile = startY + 'a';
+                        char startRank = startX + '1';
+                        char endFile = endY + 'a';
+                        char endRank = endX + '1';
+                        
+                        cout << startFile << startRank << endFile << endRank << ": " << nodes << endl;
+
+                        // --- GERİ AL ---
+                        grid[startX][startY] = std::move(grid[endX][endY]);
+                        grid[endX][endY] = std::move(capturedPiece);
+                        
+                        if (isEnPassantMove) {
+                            grid[capturedEpVictimX][capturedEpVictimY] = std::move(epCapturedPiece);
+                        }
+
+                        currentTurn = oldTurn;
+                        enPassantX = oldEpX;
+                        enPassantY = oldEpY;
+                        currentStatus = oldStatus;
+                    }
+                }
+            }
+        }
+    }
+    cout << "\nToplam Nodes (Depth " << depth << "): " << totalNodes << endl;
 }

@@ -37,5 +37,7 @@ class Board{
         bool isCheck(Turn turn);
         bool simulateMoveandCheck(int startX, int startY, int endX, int endY);
         bool hasLegalMoves();
+        void perftDivide(int depth);
+        long long perft(int depth);
 };
 
