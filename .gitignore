@@ -6,4 +6,4 @@ play_chess
 .DS_Store
 
 # Hata ayıklama (Debug) ve önbellek dosyaları
-*.dSYM/
+*.dSYM/debug_chess
