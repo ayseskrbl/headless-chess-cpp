@@ -19,9 +19,9 @@ Move generation is validated with Perft (performance test), which counts all lea
 |-------|-----------|----------------|--------|
 | 1     | 20        | < 1 ms         | Pass   |
 | 2     | 400       | < 1 ms         | Pass   |
-| 3     | 8,902     | ~8 ms          | Pass   |
-| 4     | 197,281   | ~160 ms        | Pass   |
-| 5     | 4,865,609 | ~4,000 ms      | Pass   |
+| 3     | 8,902     | ~4 ms          | Pass   |
+| 4     | 197,281   | ~70 ms         | Pass   |
+| 5     | 4,865,609 | ~1,000 ms      | Pass   |
 
 *Timings are approximate, measured with `-O2`, and depend on the machine. Only the starting position is tested so far.*
 
