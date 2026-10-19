@@ -23,7 +23,7 @@ Move generation is validated with Perft (performance test), which counts all lea
 | 4     | 197,281   | ~70 ms         | Pass   |
 | 5     | 4,865,609 | ~1,000 ms      | Pass   |
 
-*Timings are approximate, measured with `-O2`, and depend on the machine. Only the starting position is tested so far.*
+*Timings are approximate, measured with `-O2` on an Apple M4 Mac. Only the starting position is tested so far.*
 
 ## Known Limitations
 
