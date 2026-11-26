@@ -8,3 +8,6 @@ play_chess
 # Hata ayıklama (Debug) ve önbellek dosyaları
 *.dSYM/
 debug_chess
+
+# Editör ayarları
+.vscode/
